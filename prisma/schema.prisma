@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String               @id @default(cuid())
+  name                 String
+  email                String               @unique
+  passwordHash         String
+  role                 String
+  title                String?
+  imageUrl             String?
+  active               Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  participants         MeetingParticipant[]
+  assignedActionItems  ActionItem[]         @relation("ActionResponsible")
+  votes                Vote[]
+  signatures           MinuteSignature[]
+  auditLogs            AuditLog[]
+}
+
+model Campus {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  city        String
+  courses     Course[]
+  meetings    Meeting[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  name        String
+  campusId    String
+  campus      Campus       @relation(fields: [campusId], references: [id])
+  classGroups ClassGroup[]
+  meetings    Meeting[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model ClassGroup {
+  id          String       @id @default(cuid())
+  name        String
+  year        Int
+  courseId    String
+  course      Course       @relation(fields: [courseId], references: [id])
+  meetings    Meeting[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Meeting {
+  id              String               @id @default(cuid())
+  title           String
+  purpose         String?
+  scheduledAt     DateTime
+  location        String
+  status          String               @default("DRAFT")
+  quorumMinimum   Int                  @default(1)
+  reopenedReason  String?
+  campusId        String
+  courseId        String
+  classGroupId    String
+  campus          Campus               @relation(fields: [campusId], references: [id])
+  course          Course               @relation(fields: [courseId], references: [id])
+  classGroup      ClassGroup           @relation(fields: [classGroupId], references: [id])
+  participants    MeetingParticipant[]
+  agendaItems     AgendaItem[]
+  discussions     DiscussionRecord[]
+  studentCases    StudentCase[]
+  actionItems     ActionItem[]
+  deliberations   Deliberation[]
+  minute          Minute?
+  auditLogs       AuditLog[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model MeetingParticipant {
+  id          String          @id @default(cuid())
+  meetingId   String
+  userId      String
+  role        String
+  invitedAt   DateTime?
+  present     Boolean         @default(false)
+  presentAt   DateTime?
+  meeting     Meeting         @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id])
+  signatures  MinuteSignature[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([meetingId, userId])
+}
+
+model AgendaItem {
+  id          String       @id @default(cuid())
+  meetingId   String
+  title       String
+  description String?
+  order       Int          @default(0)
+  status      String       @default("PENDING")
+  meeting     Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  discussions DiscussionRecord[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model DiscussionRecord {
+  id           String      @id @default(cuid())
+  meetingId    String
+  agendaItemId String?
+  title        String
+  content      String
+  confidential Boolean     @default(false)
+  publicSummary String?
+  meeting      Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  agendaItem   AgendaItem? @relation(fields: [agendaItemId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model StudentCase {
+  id             String   @id @default(cuid())
+  meetingId      String
+  studentName    String
+  registration   String?
+  photoUrl       String?
+  summary        String
+  confidential   Boolean  @default(true)
+  publicSummary  String?
+  meeting        Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ActionItem {
+  id                  String   @id @default(cuid())
+  meetingId           String
+  title               String
+  description         String?
+  responsibleUserId   String
+  dueDate             DateTime
+  completed           Boolean  @default(false)
+  meeting             Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  responsibleUser     User     @relation("ActionResponsible", fields: [responsibleUserId], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Deliberation {
+  id          String             @id @default(cuid())
+  meetingId   String
+  title       String
+  decision    String
+  status      String             @default("DRAFT")
+  requiresVote Boolean           @default(false)
+  meeting     Meeting            @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Vote {
+  id              String       @id @default(cuid())
+  deliberationId  String
+  userId          String
+  choice          String
+  justification   String?
+  deliberation    Deliberation @relation(fields: [deliberationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id])
+  createdAt       DateTime     @default(now())
+
+  @@unique([deliberationId, userId])
+}
+
+model Minute {
+  id              String            @id @default(cuid())
+  meetingId       String            @unique
+  content         String
+  publicContent   String
+  status          String            @default("DRAFT")
+  approvedAt      DateTime?
+  finalizedAt     DateTime?
+  contentHash     String
+  meeting         Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  signatures      MinuteSignature[]
+  versions        MinuteVersion[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model MinuteSignature {
+  id             String             @id @default(cuid())
+  minuteId       String
+  userId         String
+  participantId  String
+  signedAt       DateTime           @default(now())
+  contentHash    String
+  acceptedText   String
+  minute         Minute             @relation(fields: [minuteId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id])
+  participant    MeetingParticipant @relation(fields: [participantId], references: [id])
+
+  @@unique([minuteId, userId])
+}
+
+model MinuteVersion {
+  id          String   @id @default(cuid())
+  minuteId    String
+  content     String
+  reason      String
+  version     Int
+  minute      Minute   @relation(fields: [minuteId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  event       String
+  entityType  String
+  entityId    String
+  message     String
+  metadata    String?
+  userId      String?
+  meetingId   String?
+  user        User?    @relation(fields: [userId], references: [id])
+  meeting     Meeting? @relation(fields: [meetingId], references: [id])
+  createdAt   DateTime @default(now())
+}

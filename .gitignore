@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+coverage
+.env
+dev-server.log
+dev-server.err
+*.db
+*.db-journal
