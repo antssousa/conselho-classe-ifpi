@@ -12,6 +12,7 @@ import {
   assertMinuteCanBeGenerated,
   assertMinuteCanBeSigned,
   assertMinuteCanBeUpdated,
+  assertPresentParticipantCanAct,
   calculateContentHash
 } from "@/lib/domain/meeting-rules";
 import { prisma } from "@/lib/prisma";
@@ -206,12 +207,14 @@ export async function addDeliberationAction(formData: FormData) {
 export async function addVoteAction(formData: FormData) {
   const user = await requireUser();
   const meetingId = text(formData, "meetingId");
+  const participants = await prisma.meetingParticipant.findMany({ where: { meetingId }, select: { userId: true, present: true } });
+  assertPresentParticipantCanAct(participants, user.id);
   await prisma.vote.upsert({
-    where: { deliberationId_userId: { deliberationId: text(formData, "deliberationId"), userId: text(formData, "userId") } },
+    where: { deliberationId_userId: { deliberationId: text(formData, "deliberationId"), userId: user.id } },
     update: { choice: text(formData, "choice") as never, justification: optionalText(formData, "justification") },
     create: {
       deliberationId: text(formData, "deliberationId"),
-      userId: text(formData, "userId"),
+      userId: user.id,
       choice: text(formData, "choice") as never,
       justification: optionalText(formData, "justification")
     }
@@ -280,7 +283,7 @@ export async function signMinuteAction(formData: FormData) {
   const minute = await prisma.minute.findUniqueOrThrow({ where: { meetingId } });
   assertMinuteCanBeSigned(minute.status);
   const participant = await prisma.meetingParticipant.findFirstOrThrow({
-    where: { meetingId, userId: text(formData, "userId"), present: true }
+    where: { meetingId, userId: user.id, present: true }
   });
   await prisma.minuteSignature.create({
     data: {

@@ -6,6 +6,7 @@ import {
   assertMinuteCanBeGenerated,
   assertMinuteCanBeSigned,
   assertMinuteCanBeUpdated,
+  assertPresentParticipantCanAct,
   calculateContentHash,
   calculateQuorum,
   redactConfidentialText
@@ -59,6 +60,12 @@ describe("meeting rules", () => {
 
   it("requires read approval before signature", () => {
     expect(() => assertMinuteCanBeSigned("DRAFT")).toThrow("lida/aprovada");
+  });
+
+  it("requires authenticated user to be a present participant before personal actions", () => {
+    expect(() => assertPresentParticipantCanAct([{ userId: "u1", present: true }], "u1")).not.toThrow();
+    expect(() => assertPresentParticipantCanAct([{ userId: "u1", present: false }], "u1")).toThrow("participante presente");
+    expect(() => assertPresentParticipantCanAct([{ userId: "u1", present: true }], "u2")).toThrow("participante presente");
   });
 
   it("produces stable content hash for signatures", () => {

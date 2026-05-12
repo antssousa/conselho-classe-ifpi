@@ -298,15 +298,7 @@ export default async function MeetingRoomPage({
                   <form action={addVoteAction} className="mt-3 grid gap-2">
                     <input type="hidden" name="meetingId" value={meeting.id} />
                     <input type="hidden" name="deliberationId" value={deliberation.id} />
-                    <select name="userId" defaultValue={currentUser.id}>
-                      {meeting.participants
-                        .filter((participant) => participant.present)
-                        .map((participant) => (
-                          <option key={participant.userId} value={participant.userId}>
-                            {participant.user.name}
-                          </option>
-                        ))}
-                    </select>
+                    <p className="text-xs font-semibold text-slate-500">Voto registrado como {currentUser.name}.</p>
                     <select name="choice">
                       <option value="YES">Sim</option>
                       <option value="NO">Não</option>
@@ -361,15 +353,7 @@ export default async function MeetingRoomPage({
                 <p className="mb-3 text-sm text-slate-600">Hash atual da ata: {meeting.minute.contentHash}</p>
                 <form action={signMinuteAction} className="grid gap-3">
                   <input type="hidden" name="meetingId" value={meeting.id} />
-                  <select name="userId" defaultValue={currentUser.id}>
-                    {meeting.participants
-                      .filter((participant) => participant.present)
-                      .map((participant) => (
-                        <option key={participant.userId} value={participant.userId}>
-                          {participant.user.name}
-                        </option>
-                      ))}
-                  </select>
+                  <p className="text-xs font-semibold text-slate-500">Assinatura registrada como {currentUser.name}.</p>
                   <Button>Registrar aceite e assinatura</Button>
                 </form>
                 <div className="mt-4 flex flex-wrap gap-2">

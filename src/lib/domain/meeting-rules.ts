@@ -5,6 +5,11 @@ export type ParticipantLike = {
   present: boolean;
 };
 
+export type UserParticipantLike = {
+  userId: string;
+  present: boolean;
+};
+
 export type QuorumResult = {
   present: number;
   eligible: number;
@@ -66,6 +71,14 @@ export function redactConfidentialText(content: string, confidential: boolean, p
 export function assertMinuteCanBeSigned(status: string) {
   if (status !== "READ_APPROVED") {
     throw new Error("Ata precisa ser marcada como lida/aprovada antes de assinatura.");
+  }
+}
+
+export function assertPresentParticipantCanAct(participants: UserParticipantLike[], userId: string) {
+  const participant = participants.find((item) => item.userId === userId);
+
+  if (!participant?.present) {
+    throw new Error("A acao exige um participante presente na reuniao.");
   }
 }
 
