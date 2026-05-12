@@ -7,6 +7,7 @@ import {
   assertMinuteCanBeSigned,
   assertMinuteCanBeUpdated,
   assertPresentParticipantCanAct,
+  assertQuorumReached,
   calculateContentHash,
   calculateQuorum,
   redactConfidentialText
@@ -76,6 +77,11 @@ describe("meeting rules", () => {
   it("blocks editing finalized minute without reopening reason", () => {
     expect(() => assertMinuteCanBeUpdated("FINALIZED")).toThrow("reabertura");
     expect(() => assertMinuteCanBeUpdated("FINALIZED", "Correção formal")).not.toThrow();
+  });
+
+  it("blocks opening meeting when quorum minimum is not reached", () => {
+    expect(() => assertQuorumReached(participants, 3)).toThrow("Quórum mínimo não atingido (2/3)");
+    expect(() => assertQuorumReached(participants, 2)).not.toThrow();
   });
 }
 );

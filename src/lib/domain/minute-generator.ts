@@ -32,6 +32,7 @@ type MinuteInput = {
   actionItems: {
     title: string;
     responsibleName: string;
+    studentName?: string | null;
     dueDate: Date;
     description?: string | null;
   }[];
@@ -87,7 +88,10 @@ function composeMinute(input: MinuteInput, publicOnly: boolean) {
     "",
     "ENCAMINHAMENTOS",
     input.actionItems
-      .map((item) => `- ${item.title}. Responsável: ${item.responsibleName}. Prazo: ${formatDate(item.dueDate)}.${item.description ? ` ${item.description}` : ""}`)
+      .map(
+        (item) =>
+          `- ${item.title}.${item.studentName ? ` Aluno: ${item.studentName}.` : ""} Responsável: ${item.responsibleName}. Prazo: ${formatDate(item.dueDate)}.${item.description ? ` ${item.description}` : ""}`
+      )
       .join("\n") || "Sem encaminhamentos registrados.",
     "",
     "DELIBERAÇÕES E VOTOS",

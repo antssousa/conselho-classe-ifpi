@@ -2,11 +2,16 @@
 
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ActionForm } from "@/components/forms/action-form";
+import { SubmitButton } from "@/components/forms/submit-button";
+import type { ActionResult } from "@/lib/action-result";
 import { filterPeople, personImage, type PersonSearchItem } from "@/lib/people";
 
 type UserItem = PersonSearchItem & {
   id: string;
 };
+
+type AddParticipantAction = (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
 
 const participantRoles = [
   ["PRESIDENT", "Presidente"],
@@ -27,7 +32,7 @@ export function ParticipantSearch({
   meetingId: string;
   users: UserItem[];
   existingUserIds: string[];
-  action: (formData: FormData) => void | Promise<void>;
+  action: AddParticipantAction;
 }) {
   const [query, setQuery] = useState("");
   const [roleByUser, setRoleByUser] = useState<Record<string, string>>({});
@@ -53,7 +58,11 @@ export function ParticipantSearch({
           const alreadyAdded = existing.has(user.id);
 
           return (
-            <form key={user.id} action={action} className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <ActionForm
+              key={user.id}
+              action={action}
+              className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+            >
               <input type="hidden" name="meetingId" value={meetingId} />
               <input type="hidden" name="userId" value={user.id} />
               <div className="grid gap-3 sm:grid-cols-[56px_1fr] sm:items-center">
@@ -72,6 +81,7 @@ export function ParticipantSearch({
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <select
                   name="role"
+                  aria-label={`Papel de ${user.name}`}
                   value={selectedRole}
                   onChange={(event) => setRoleByUser((current) => ({ ...current, [user.id]: event.target.value }))}
                 >
@@ -81,14 +91,15 @@ export function ParticipantSearch({
                     </option>
                   ))}
                 </select>
-                <button
-                  className="rounded-md bg-ifpi-green px-3 py-2 text-sm font-bold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                <SubmitButton
                   disabled={alreadyAdded}
+                  pendingLabel="Adicionando..."
+                  className="rounded-md bg-ifpi-green px-3 py-2 text-sm font-bold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {alreadyAdded ? "Adicionado" : "Adicionar"}
-                </button>
+                </SubmitButton>
               </div>
-            </form>
+            </ActionForm>
           );
         })}
         {!filteredUsers.length ? (

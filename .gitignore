@@ -7,3 +7,4 @@ dev-server.log
 dev-server.err
 *.db
 *.db-journal
+.claude/

@@ -53,8 +53,21 @@ model ClassGroup {
   courseId    String
   course      Course       @relation(fields: [courseId], references: [id])
   meetings    Meeting[]
+  students    Student[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+model Student {
+  id           String        @id @default(cuid())
+  classGroupId String
+  name         String
+  photoUrl     String?
+  classGroup   ClassGroup    @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  studentCases StudentCase[]
+  actionItems  ActionItem[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Meeting {
@@ -131,6 +144,7 @@ model DiscussionRecord {
 model StudentCase {
   id             String   @id @default(cuid())
   meetingId      String
+  studentId      String?
   studentName    String
   registration   String?
   photoUrl       String?
@@ -138,6 +152,7 @@ model StudentCase {
   confidential   Boolean  @default(true)
   publicSummary  String?
   meeting        Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  student        Student? @relation(fields: [studentId], references: [id])
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -145,6 +160,7 @@ model StudentCase {
 model ActionItem {
   id                  String   @id @default(cuid())
   meetingId           String
+  studentId           String?
   title               String
   description         String?
   responsibleUserId   String
@@ -152,6 +168,7 @@ model ActionItem {
   completed           Boolean  @default(false)
   meeting             Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   responsibleUser     User     @relation("ActionResponsible", fields: [responsibleUserId], references: [id])
+  student             Student? @relation(fields: [studentId], references: [id])
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { createMeetingAction } from "./actions";
+import { ActionForm } from "@/components/forms/action-form";
+import { Field } from "@/components/forms/field";
+import { SubmitButton } from "@/components/forms/submit-button";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -24,7 +27,7 @@ export default async function HomePage() {
             <p className="mt-1 text-sm text-slate-600">Gerencie o ciclo de convocação, ata e assinaturas.</p>
           </div>
         </div>
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -66,7 +69,7 @@ export default async function HomePage() {
 
       <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-bold">Nova reunião</h2>
-        <form action={createMeetingAction} className="mt-4 grid gap-3">
+        <ActionForm action={createMeetingAction} className="mt-4 grid gap-3">
           <Field label="Título">
             <input name="title" required placeholder="Conselho de Classe 1º bimestre" />
           </Field>
@@ -82,36 +85,37 @@ export default async function HomePage() {
           <Field label="Quórum mínimo">
             <input name="quorumMinimum" type="number" min="1" defaultValue="2" required />
           </Field>
-          <Select name="campusId" label="Campus" options={campuses} />
-          <Select name="courseId" label="Curso" options={courses} />
-          <Select name="classGroupId" label="Turma" options={classGroups} />
-          <button className="rounded-md bg-ifpi-green px-4 py-2 text-sm font-bold text-white">Criar reunião</button>
-        </form>
+          <Field label="Campus">
+            <select name="campusId" required>
+              {campuses.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Curso">
+            <select name="courseId" required>
+              {courses.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Turma">
+            <select name="classGroupId" required>
+              {classGroups.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <SubmitButton>Criar reunião</SubmitButton>
+        </ActionForm>
       </aside>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid gap-1">
-      <label>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Select({ label, name, options }: { label: string; name: string; options: { id: string; name: string }[] }) {
-  return (
-    <Field label={label}>
-      <select name={name} required>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-    </Field>
   );
 }
 

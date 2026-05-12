@@ -44,6 +44,14 @@ export function calculateQuorum(participants: ParticipantLike[], minimum: number
   };
 }
 
+export function assertQuorumReached(participants: ParticipantLike[], minimum: number) {
+  const quorum = calculateQuorum(participants, minimum);
+
+  if (!quorum.reached) {
+    throw new Error(`Quórum mínimo não atingido (${quorum.present}/${quorum.minimum}).`);
+  }
+}
+
 export function assertMeetingCanBePubliclyFinalized(participants: ParticipantLike[]) {
   const hasStudentRepresentative = participants.some(
     (participant) => participant.role === "STUDENT_REPRESENTATIVE" && participant.present
