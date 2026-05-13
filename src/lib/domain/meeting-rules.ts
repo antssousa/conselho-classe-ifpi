@@ -19,10 +19,9 @@ export type QuorumResult = {
 
 export function assertMeetingCanBeOpened(participants: ParticipantLike[]) {
   const hasPresident = participants.some((participant) => participant.role === "PRESIDENT");
-  const hasSecretary = participants.some((participant) => participant.role === "SECRETARY");
 
-  if (!hasPresident || !hasSecretary) {
-    throw new Error("Não é possível abrir a reunião sem presidente e secretário.");
+  if (!hasPresident) {
+    throw new Error("Não é possível abrir a reunião sem presidente.");
   }
 }
 

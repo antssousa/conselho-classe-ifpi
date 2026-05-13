@@ -7,7 +7,6 @@ import {
   assertMinuteCanBeSigned,
   assertMinuteCanBeUpdated,
   assertPresentParticipantCanAct,
-  assertQuorumReached,
   calculateContentHash,
   calculateQuorum,
   redactConfidentialText
@@ -20,10 +19,11 @@ const participants = [
 ];
 
 describe("meeting rules", () => {
-  it("requires president and secretary before opening a meeting", () => {
-    expect(() => assertMeetingCanBeOpened([{ role: "PRESIDENT", present: false }])).toThrow(
-      "presidente e secretário"
+  it("requires president before opening a meeting", () => {
+    expect(() => assertMeetingCanBeOpened([{ role: "SECRETARY", present: true }])).toThrow(
+      "presidente"
     );
+    expect(() => assertMeetingCanBeOpened([{ role: "PRESIDENT", present: false }])).not.toThrow();
   });
 
   it("requires registered attendance before minute generation", () => {
@@ -79,9 +79,13 @@ describe("meeting rules", () => {
     expect(() => assertMinuteCanBeUpdated("FINALIZED", "Correção formal")).not.toThrow();
   });
 
-  it("blocks opening meeting when quorum minimum is not reached", () => {
-    expect(() => assertQuorumReached(participants, 3)).toThrow("Quórum mínimo não atingido (2/3)");
-    expect(() => assertQuorumReached(participants, 2)).not.toThrow();
+  it("calculates quorum but does not block opening", () => {
+    expect(calculateQuorum(participants, 3)).toEqual({
+      present: 2,
+      eligible: 3,
+      minimum: 3,
+      reached: false
+    });
   });
 }
 );

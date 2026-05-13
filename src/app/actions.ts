@@ -14,7 +14,6 @@ import {
   assertMinuteCanBeSigned,
   assertMinuteCanBeUpdated,
   assertPresentParticipantCanAct,
-  assertQuorumReached,
   calculateContentHash
 } from "@/lib/domain/meeting-rules";
 import { prisma } from "@/lib/prisma";
@@ -255,7 +254,7 @@ export async function addParticipantAction(_: ActionResult | null, formData: For
     await prisma.meetingParticipant.upsert({
       where: { meetingId_userId: { meetingId, userId: text(formData, "userId") } },
       update: { role: text(formData, "role") as never },
-      create: { meetingId, userId: text(formData, "userId"), role: text(formData, "role") as never }
+      create: { meetingId, userId: text(formData, "userId"), role: text(formData, "role") as never, present: true, presentAt: new Date() }
     });
     await audit("PARTICIPANT_ADDED", "Meeting", meetingId, "Participante adicionado ou atualizado.", user.id, meetingId);
     revalidateMeeting(meetingId);
@@ -285,12 +284,8 @@ export async function openMeetingAction(_: ActionResult | null, formData: FormDa
   try {
     const user = await requireUser();
     const meetingId = text(formData, "meetingId");
-    const [meeting, participants] = await Promise.all([
-      prisma.meeting.findUniqueOrThrow({ where: { id: meetingId }, select: { quorumMinimum: true } }),
-      prisma.meetingParticipant.findMany({ where: { meetingId }, select: { role: true, present: true } })
-    ]);
+    const participants = await prisma.meetingParticipant.findMany({ where: { meetingId }, select: { role: true, present: true } });
     assertMeetingCanBeOpened(participants);
-    assertQuorumReached(participants, meeting.quorumMinimum);
     await prisma.meeting.update({ where: { id: meetingId }, data: { status: "OPEN" } });
     await audit("MEETING_OPENED", "Meeting", meetingId, "Reunião aberta.", user.id, meetingId);
     revalidateMeeting(meetingId);
@@ -388,6 +383,36 @@ export async function addStudentCaseAction(_: ActionResult | null, formData: For
     });
     revalidateMeeting(meetingId);
     return ok("Estudante registrado.");
+  } catch (error) {
+    return fail(messageFor(error));
+  }
+}
+
+export async function updateStudentCaseAction(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  try {
+    await requireUser();
+    const id = text(formData, "id");
+    const meetingId = text(formData, "meetingId");
+    await assertMinuteEditable(meetingId);
+
+    const studentName = text(formData, "studentName");
+    if (!studentName) {
+      return fail("Informe o nome do estudante.");
+    }
+
+    await prisma.studentCase.update({
+      where: { id },
+      data: {
+        studentName,
+        registration: optionalText(formData, "registration"),
+        photoUrl: optionalText(formData, "photoUrl"),
+        summary: text(formData, "summary"),
+        publicSummary: optionalText(formData, "publicSummary"),
+        confidential: formData.get("confidential") !== "off"
+      }
+    });
+    revalidateMeeting(meetingId);
+    return ok("Caso atualizado.");
   } catch (error) {
     return fail(messageFor(error));
   }

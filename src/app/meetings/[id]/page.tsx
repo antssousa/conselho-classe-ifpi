@@ -5,7 +5,6 @@ import {
   addDeliberationAction,
   addDiscussionAction,
   addParticipantAction,
-  addStudentCaseAction,
   addVoteAction,
   approveMinuteAction,
   callMeetingAction,
@@ -15,21 +14,18 @@ import {
   reopenMinuteAction,
   signMinuteAction,
   updateMinuteAction,
-  updatePresenceAction
 } from "@/app/actions";
 import { ActionForm } from "@/components/forms/action-form";
 import { ConfirmSubmitButton } from "@/components/forms/confirm-submit-button";
 import { Field } from "@/components/forms/field";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { ParticipantSearch } from "./participant-search";
+import { StudentCaseSection } from "./student-case-card";
 import { requireUser } from "@/lib/auth";
-import { calculateQuorum } from "@/lib/domain/meeting-rules";
-import { studentImage } from "@/lib/people";
 import { prisma } from "@/lib/prisma";
 
 const tabs = [
   ["abertura", "Abertura"],
-  ["presenca", "Presença e Quórum"],
   ["pauta", "Pauta"],
   ["discussoes", "Discussões"],
   ["estudantes", "Estudantes"],
@@ -67,10 +63,8 @@ export default async function MeetingRoomPage({
     prisma.user.findMany({ where: { active: true }, orderBy: { name: "asc" } })
   ]);
   const activeTab = searchParams.tab || "abertura";
-  const quorum = calculateQuorum(meeting.participants, meeting.quorumMinimum);
   const progress: Record<string, boolean> = {
     abertura: meeting.status !== "DRAFT",
-    presenca: quorum.reached,
     pauta: meeting.agendaItems.length > 0,
     discussoes: meeting.discussions.length > 0,
     estudantes: meeting.studentCases.length > 0,
@@ -98,7 +92,7 @@ export default async function MeetingRoomPage({
           </div>
           <div className="grid gap-2 text-sm lg:min-w-64">
             <Status label="Status" value={meeting.status} />
-            <Status label="Quórum" value={`${quorum.present}/${quorum.eligible} presentes · mínimo ${quorum.minimum}`} good={quorum.reached} />
+            <Status label="Participantes" value={`${meeting.participants.length}`} />
             <Status label="Ata" value={meeting.minute?.status || "Não gerada"} />
           </div>
         </div>
@@ -143,8 +137,8 @@ export default async function MeetingRoomPage({
               </div>
               <RuleList
                 items={[
-                  "Abertura exige presidente e secretário.",
-                  "Abertura exige quórum mínimo atingido.",
+                  "Abertura exige presidente.",
+                  "Participantes adicionados são considerados presentes.",
                   "Eventos críticos são registrados em AuditLog.",
                   "Ata finalizada exige reabertura justificada para edição."
                 ]}
@@ -171,34 +165,6 @@ export default async function MeetingRoomPage({
             </div>
           </Panel>
         </Grid>
-      ) : null}
-
-      {activeTab === "presenca" ? (
-        <Panel title="Presença e Quórum">
-          <div className="mb-4 rounded-md bg-slate-50 p-4 text-sm">
-            Quórum calculado automaticamente: <strong>{quorum.reached ? "atingido" : "não atingido"}</strong>.
-          </div>
-          <div className="grid gap-2">
-            {meeting.participants.map((participant) => (
-              <ActionForm
-                key={participant.id}
-                action={updatePresenceAction}
-                className="flex items-center justify-between rounded-md border border-slate-200 bg-white p-3"
-              >
-                <input type="hidden" name="meetingId" value={meeting.id} />
-                <input type="hidden" name="participantId" value={participant.id} />
-                <span className="text-sm">
-                  <strong>{participant.user.name}</strong> · {participant.role}
-                </span>
-                <label className="flex items-center gap-2 text-sm normal-case tracking-normal text-slate-700">
-                  <input name="present" type="checkbox" defaultChecked={participant.present} className="h-4 w-4" />
-                  Presente
-                  <SubmitButton>Salvar</SubmitButton>
-                </label>
-              </ActionForm>
-            ))}
-          </div>
-        </Panel>
       ) : null}
 
       {activeTab === "pauta" ? (
@@ -256,63 +222,20 @@ export default async function MeetingRoomPage({
       ) : null}
 
       {activeTab === "estudantes" ? (
-        <Grid>
-          <Panel title="Estudante discutido">
-            <ActionForm action={addStudentCaseAction} className="grid gap-3">
-              <input type="hidden" name="meetingId" value={meeting.id} />
-              <Field label="Aluno da turma">
-                <select name="studentId" defaultValue="">
-                  <option value="">— Digitar nome manualmente —</option>
-                  {meeting.classGroup.students.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Nome do estudante (se não cadastrado)">
-                <input name="studentName" placeholder="Preenchido automaticamente se aluno selecionado acima" />
-              </Field>
-              <Field label="Matrícula">
-                <input name="registration" placeholder="Matrícula" />
-              </Field>
-              <Field label="URL da foto">
-                <input name="photoUrl" placeholder="Sobrescreve a foto do cadastro" />
-              </Field>
-              <Field label="Síntese do caso">
-                <textarea name="summary" placeholder="Síntese do caso" required />
-              </Field>
-              <Field label="Resumo público">
-                <textarea name="publicSummary" placeholder="Resumo público" />
-              </Field>
-              <Check name="confidential" label="Sigiloso" defaultChecked />
-              <SubmitButton>Salvar estudante</SubmitButton>
-            </ActionForm>
-          </Panel>
-          <Panel title="Casos">
-            <div className="grid gap-3">
-              {meeting.studentCases.length ? (
-                meeting.studentCases.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[56px_1fr] items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={studentImage(item.photoUrl)}
-                      alt={`Foto de ${item.studentName}`}
-                      className="h-14 w-14 rounded-full border border-slate-200 object-cover"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-950">{item.studentName}</p>
-                      <p className="truncate text-xs text-slate-500">{item.registration || "Sem matrícula informada"}</p>
-                      <p className="text-xs font-semibold text-slate-500">{item.confidential ? "Sigiloso" : "Público"}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">Nenhum registro.</div>
-              )}
-            </div>
-          </Panel>
-        </Grid>
+        <StudentCaseSection
+          meetingId={meeting.id}
+          students={meeting.classGroup.students.map((s) => ({ id: s.id, name: s.name, photoUrl: s.photoUrl }))}
+          cases={meeting.studentCases.map((item) => ({
+            id: item.id,
+            studentId: item.studentId,
+            studentName: item.studentName,
+            registration: item.registration,
+            photoUrl: item.photoUrl,
+            summary: item.summary,
+            publicSummary: item.publicSummary,
+            confidential: item.confidential
+          }))}
+        />
       ) : null}
 
       {activeTab === "encaminhamentos" ? (
